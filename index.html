@@ -1,0 +1,1006 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wazuh Decoder Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --paper:#e9edf1; --card:#fff; --plate:#141c26; --plate-2:#1d2836;
+  --ink:#16202c; --ink-2:#57677a; --ink-3:#8b9bad;
+  --line:#ccd6e0; --line-soft:#e2e8ee;
+  --blue:#1f5fa8; --blue-soft:#e8f0f9; --ok:#1d7a4c; --bad:#a33a3a; --warn:#a8641f;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --r:5px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+.shell{max-width:1420px;margin:0 auto;padding:20px 20px 60px}
+header.top{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:baseline;padding-bottom:14px;border-bottom:1px solid var(--line)}
+header.top h1{font-size:19px;font-weight:600;margin:0;letter-spacing:-.01em}
+header.top h1 span{color:var(--blue)}
+header.top p{margin:0;color:var(--ink-2);font-size:13px;max-width:60ch}
+.top-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+.strip{display:flex;align-items:stretch;flex-wrap:wrap;margin:0 0 16px;border-bottom:1px solid var(--line)}
+.dtab{border:1px solid transparent;border-bottom:0;background:none;cursor:pointer;padding:9px 13px;font-size:13px;color:var(--ink-2);border-radius:4px 4px 0 0;display:flex;align-items:center;gap:7px;margin-bottom:-1px}
+.dtab:hover{background:#dfe6ee}
+.dtab.on{background:var(--card);border-color:var(--line);color:var(--ink);font-weight:500}
+.dtab .kind{font-size:10px;padding:1px 5px;border-radius:9px;background:#dde5ed;color:var(--ink-2);font-weight:400}
+.dtab.parent .kind{background:#dbe8f6;color:var(--blue)}
+.dtab .cnt{font-family:var(--mono);font-size:10.5px;color:var(--ink-3)}
+.dtab .dot{width:6px;height:6px;border-radius:50%;background:var(--ok)}
+.dtab .dot.bad{background:var(--bad)}
+.dtab .kill{border:0;background:none;color:var(--ink-3);cursor:pointer;font-size:14px;line-height:1;padding:0 2px;border-radius:3px}
+.dtab .kill:hover{color:var(--bad)}
+.strip .add{border:0;background:none;color:var(--blue);cursor:pointer;padding:9px 12px;font-size:13px}
+.strip .add:hover{text-decoration:underline}
+.strip .chain{align-self:center;color:var(--ink-3);font-size:15px;padding:0 5px 4px}
+
+.grid{display:grid;grid-template-columns:236px minmax(0,1fr) minmax(0,430px);gap:16px;align-items:start}
+@media (max-width:1200px){.grid{grid-template-columns:220px minmax(0,1fr)} .col-out{grid-column:1/-1}}
+@media (max-width:760px){.grid{grid-template-columns:1fr}}
+
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r)}
+.panel-hd{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line-soft)}
+.panel-hd h2{margin:0;font-size:13px;font-weight:600}
+.panel-hd .hint{font-size:12px;color:var(--ink-3);font-weight:400}
+.panel-bd{padding:12px}
+
+.rail{position:sticky;top:20px}
+.group-label{font-size:12px;color:var(--ink-2);margin:14px 0 7px;font-weight:500}
+.group-label:first-child{margin-top:0}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{font-family:var(--mono);font-size:12px;padding:3px 8px;border-radius:3px;border:1px solid var(--line);background:#f7f9fb;cursor:grab;user-select:none;transition:background .12s,border-color .12s}
+.chip:hover{background:var(--blue-soft);border-color:#a9c6e4}
+.chip:active{cursor:grabbing}
+.chip.used{opacity:.38;text-decoration:line-through}
+.chip.custom{border-style:dashed}
+.newfield{display:flex;gap:5px;margin-top:8px}
+.newfield input{flex:1;min-width:0;font-family:var(--mono);font-size:12px;padding:4px 7px;border:1px solid var(--line);border-radius:3px;background:#fff}
+.legend{margin-top:16px;padding-top:12px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--ink-2);line-height:1.55}
+
+.plate-wrap{padding:0;overflow:hidden;border-radius:var(--r)}
+.plate-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:9px 12px;background:var(--plate-2);border-bottom:1px solid #2b3a4d}
+.plate-bar .t{font-size:12px;color:#94a8bf;font-family:var(--mono)}
+.plate-bar .sp{margin-left:auto}
+.plate{background:var(--plate);padding:16px 14px;font-family:var(--mono);font-size:13px;line-height:2.2;color:#c9d6e4;white-space:pre-wrap;word-break:break-word;min-height:110px}
+.plate.empty{color:#5a6b80;line-height:1.6;font-family:var(--sans)}
+.tok{border-radius:3px;padding:3px 1px;transition:background .1s,box-shadow .1s}
+.tok.drop{background:#2c3d52;box-shadow:0 0 0 1px #5b8ec4;color:#eaf2fa}
+.tok.hoverable:hover{background:#222f3f}
+.seg{border-radius:3px;padding:3px 4px;color:#0f1720;font-weight:500;box-shadow:0 0 0 1px rgba(0,0,0,.25) inset}
+.seg.drop{filter:brightness(1.15);box-shadow:0 0 0 2px #fff inset}
+.seg .tag{font-size:10px;opacity:.82;margin-left:5px;border-left:1px solid rgba(0,0,0,.3);padding-left:5px}
+.seg.flash{animation:pop .4s ease}
+@keyframes pop{0%{transform:scale(1)}35%{transform:scale(1.05)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.seg.flash{animation:none}}
+.ghost{border-radius:3px;padding:3px 3px;color:#8fa6bd;background:#1b2634;border-bottom:2px dotted #5c7590}
+.ghost .tag{font-size:10px;color:#6e849c;margin-left:5px}
+.seg.skipseg{background:#33404f;color:#9fb3c8;box-shadow:none;border:1px dashed #5f7995;font-weight:400}
+.seg.skipseg .tag{border-left-color:#5f7995;color:#7d93aa}
+.chip.skipchip{background:#eef2f6;border-style:dashed;color:var(--ink-2)}
+.pending{background:repeating-linear-gradient(45deg,#3b4b60,#3b4b60 5px,#44566d 5px,#44566d 10px);border-radius:3px;padding:3px 2px;box-shadow:0 0 0 1px #7fa8d0;color:#fff}
+
+.caps{width:100%;border-collapse:collapse}
+.caps th{text-align:left;font-size:11px;font-weight:500;color:var(--ink-3);padding:0 8px 7px;border-bottom:1px solid var(--line-soft)}
+.caps td{padding:6px 8px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+.caps tr:last-child td{border-bottom:0}
+.caps .n{width:22px;font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+.swatch{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:6px;vertical-align:-1px}
+.caps .fname{font-family:var(--mono);font-size:12px}
+.caps .val{font-family:var(--mono);font-size:12px;color:var(--ink-2);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.caps select{font-family:var(--mono);font-size:11px;padding:2px 4px;border:1px solid var(--line);border-radius:3px;background:#fff;max-width:145px}
+.caps .x{border:0;background:none;color:var(--ink-3);cursor:pointer;padding:2px 5px;border-radius:3px;font-size:15px;line-height:1}
+.caps .x:hover{background:#fbe9e9;color:var(--bad)}
+
+.check{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line-soft);font-size:12.5px}
+.check:last-child{border-bottom:0}
+.check .m{flex-shrink:0;width:15px;text-align:center;font-weight:600}
+.check.ok .m{color:var(--ok)} .check.bad .m{color:var(--bad)} .check.warn .m{color:var(--warn)}
+.check .who{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);margin-top:1px}
+
+.tabs{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--line-soft);flex-wrap:wrap}
+.tab{border:0;background:none;padding:9px 10px;font-size:12.5px;color:var(--ink-2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--blue);font-weight:500}
+pre.out{margin:0;padding:12px;font-family:var(--mono);font-size:12px;line-height:1.65;background:var(--plate);color:#c9d6e4;white-space:pre-wrap;word-break:break-word;max-height:460px;overflow:auto;border-radius:0 0 var(--r) var(--r)}
+pre.out .k{color:#7fb2e5}pre.out .a{color:#96c9a3}pre.out .s{color:#e0b072}pre.out .c{color:#6a7d93;font-style:italic}
+
+.btn{border:1px solid var(--line);background:#fff;border-radius:3px;padding:5px 11px;font-size:12.5px;cursor:pointer;color:var(--ink)}
+.btn:hover{background:#f2f6fa}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.primary:hover{background:#1a5093}
+.btn.ghost-dark{background:transparent;border-color:#3a4c62;color:#b6c8dc}
+.btn.ghost-dark:hover{background:#26364a}
+.tog{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-2);cursor:pointer}
+.tog input{accent-color:var(--blue)}
+.tog.dark{color:#94a8bf}
+.inp{font-family:var(--mono);font-size:12px;padding:4px 8px;border:1px solid var(--line);border-radius:3px;background:#fff}
+.empty-note{color:var(--ink-3);font-size:12.5px;padding:6px 2px}
+textarea.raw{width:100%;font-family:var(--mono);font-size:12.5px;padding:10px;border:1px solid var(--line);border-radius:3px;min-height:90px;resize:vertical;background:#fbfcfd}
+
+.modal-bg{position:fixed;inset:0;background:rgba(16,24,34,.55);z-index:50;display:flex;align-items:flex-start;justify-content:center;padding:48px 16px}
+.modal-bg[hidden]{display:none}
+.modal{background:var(--card);border-radius:6px;width:min(760px,100%);max-height:82vh;display:flex;flex-direction:column;box-shadow:0 18px 44px rgba(11,20,32,.32)}
+.modal-hd{display:flex;gap:8px;padding:12px;border-bottom:1px solid var(--line-soft);align-items:center}
+.modal-hd input{flex:1;min-width:0;padding:7px 10px;border:1px solid var(--line);border-radius:3px;font-size:13.5px}
+.modal-hd .to{font-size:12px;color:var(--ink-3);white-space:nowrap;font-family:var(--mono)}
+.modal-bd{overflow:auto;padding:4px 0}
+.lib-group{font-size:11.5px;color:var(--ink-3);padding:12px 14px 5px;position:sticky;top:0;background:linear-gradient(var(--card) 70%,rgba(255,255,255,0))}
+.lib-item{display:block;width:100%;text-align:left;border:0;background:none;cursor:pointer;padding:7px 14px;border-left:2px solid transparent}
+.lib-item:hover{background:var(--blue-soft);border-left-color:var(--blue)}
+.lib-item b{font-weight:500;font-size:13px}
+.lib-item span{display:block;font-family:var(--mono);font-size:11px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.modal-ft{border-top:1px solid var(--line-soft);padding:10px 14px}
+.modal-ft summary{cursor:pointer;font-size:12.5px;color:var(--ink-2)}
+.modal-ft textarea{width:100%;margin-top:8px;min-height:80px;font-family:var(--mono);font-size:12px;padding:8px;border:1px solid var(--line);border-radius:3px;resize:vertical}
+.lib-none{padding:22px 14px;color:var(--ink-3);font-size:13px}
+
+.foot{margin-top:22px;padding-top:14px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-2);max-width:82ch}
+.foot code{font-family:var(--mono);font-size:12px;background:#dfe6ed;padding:1px 4px;border-radius:3px}
+</style>
+
+<div class="shell">
+  <header class="top">
+    <div>
+      <h1>Wazuh <span>decoder</span> builder</h1>
+      <p>The parent pulls the fields every log shares; children handle the individual variants. Drag a field onto part of the log line.</p>
+    </div>
+    <div class="top-actions">
+      <button class="btn primary" id="openLib">Log library</button>
+      <button class="btn" id="editRaw">Paste a line</button>
+    </div>
+  </header>
+
+  <div class="strip" id="strip"></div>
+
+  <div class="grid">
+    <div>
+      <div class="panel rail">
+        <div class="panel-hd"><h2>Fields</h2><span class="hint">drag</span></div>
+        <div class="panel-bd">
+          <div class="group-label">Wazuh standard fields</div>
+          <div class="chips" id="chipsKnown"></div>
+          <div class="group-label">Custom fields</div>
+          <div class="chips" id="chipsCustom"></div>
+          <div class="newfield">
+            <input id="newField" placeholder="new_field_name" aria-label="New field name">
+            <button class="btn" id="addField">Add</button>
+          </div>
+          <div class="legend">
+            Fields the parent captured show up dotted on a child's screen. You don't need to capture them again — both sets merge into the same event.<br><br>
+            Wazuh tries children in the order they're written and stops at the first match, so put the narrowest one first.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div id="rawBox" style="display:none;margin-bottom:16px" class="panel">
+        <div class="panel-hd"><h2>Log line</h2><span class="hint" id="rawFor"></span></div>
+        <div class="panel-bd">
+          <textarea class="raw" id="rawInput" spellcheck="false"></textarea>
+          <div style="margin-top:9px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button class="btn primary" id="applyRaw">Use this line</button>
+            <button class="btn" id="cancelRaw">Cancel</button>
+            <label class="tog"><input type="checkbox" id="stripPrefix" checked> strip the archives.log header</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel plate-wrap" style="margin-bottom:16px">
+        <div class="plate-bar">
+          <span class="t" id="plateLabel"></span>
+          <span class="sp"></span>
+          <label class="tog dark"><input type="checkbox" id="tokQuoted" checked> quoted text as one token</label>
+          <button class="btn ghost-dark" id="autoDetect">Auto-mark</button>
+          <button class="btn ghost-dark" id="clearSegs">Clear</button>
+        </div>
+        <div class="plate" id="plate"></div>
+      </div>
+
+      <div class="panel" style="margin-bottom:16px">
+        <div class="panel-hd"><h2>Captures</h2><span class="hint" id="capCount"></span></div>
+        <div class="panel-bd" id="capsWrap"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-hd"><h2>Chain check</h2><span class="hint">parent → child matching</span></div>
+        <div class="panel-bd" id="checks"></div>
+      </div>
+    </div>
+
+    <div class="col-out">
+      <div class="panel">
+        <div class="panel-hd">
+          <h2>Output</h2>
+          <button class="btn" id="copyBtn">Copy</button>
+        </div>
+        <div class="tabs" role="tablist">
+          <button class="tab" role="tab" data-tab="decoder" aria-selected="true">Decoder set</button>
+          <button class="tab" role="tab" data-tab="rule" aria-selected="false">Rules</button>
+          <button class="tab" role="tab" data-tab="json" aria-selected="false">Alert JSON</button>
+          <button class="tab" role="tab" data-tab="test" aria-selected="false">logtest</button>
+        </div>
+        <div style="padding:10px 12px;border-bottom:1px solid var(--line-soft);display:flex;gap:14px;flex-wrap:wrap">
+          <label class="tog"><input type="checkbox" id="optTrim" checked> start the regex at the first capture</label>
+          <label class="tog"><input type="checkbox" id="optShareName" checked> children share the parent's name</label>
+        </div>
+        <pre class="out" id="output"></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="lib" hidden>
+    <div class="modal" role="dialog" aria-label="Log library">
+      <div class="modal-hd">
+        <input id="libSearch" placeholder="Search: sshd, fortigate, 4625…" autocomplete="off">
+        <span class="to" id="libTarget"></span>
+        <button class="btn" id="libClose">Close</button>
+      </div>
+      <div class="modal-bd" id="libList"></div>
+      <div class="modal-ft">
+        <details>
+          <summary>Add your own logs to the list</summary>
+          <textarea id="libPaste" spellcheck="false" placeholder="Each line becomes its own sample."></textarea>
+          <button class="btn" id="libAdd" style="margin-top:8px">Add to list</button>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <p class="foot">
+    Once the parent matches, Wazuh tries the child decoders in the order they are written and stops at the first one that fits.
+    The generated regex is <code>type="pcre2"</code>. Test it with <code>/var/ossec/bin/wazuh-logtest</code>, then run <code>systemctl restart wazuh-manager</code>.
+  </p>
+</div>
+
+<script>
+"use strict";
+
+const KNOWN = ["srcip","dstip","srcport","dstport","srcuser","dstuser","protocol",
+  "action","id","url","status","system_name","data","extra_data"];
+
+let customFields = ["erp_module","erp_server","erp_port","erp_instance",
+  "client_name","client_ip","client_pub_ip","erp_client","erp_sysid","erp_langid",
+  "sw_version","language","sequence_id","sys_uptime","transaction","evt_time"];
+
+const PATTERNS = [
+  ["\\d+\\.\\d+\\.\\d+\\.\\d+","IPv4"],["\\d+","number"],["\\w+","word"],["\\S+","no spaces"],
+  ["[^\"]+","inside quotes"],["[^)]+","inside parens"],["[^\\]]+","inside brackets"],
+  ["[\\w.-]+","host/name"],["[\\d:.T-]+Z?","timestamp"],[".+","rest of the line"]
+];
+
+const SKIP_PATTERNS = [[".*?","anything (lazy)"],[".+?","one or more"],["\\S+","no spaces"],["[^\"]*","inside quotes"]];
+const SKIP = "__skip__";
+
+const HUES = ["#f2c14e","#7fc7a3","#8ab4e8","#e79a9a","#c2a5e0","#8fd0d8","#e8b48a","#a8c98b","#d9a3c4","#9fb8d8"];
+const ARCHIVE_PREFIX = /^\d{4}\s+\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+\S+->\S+\s+/;
+
+const LIBRARY = [
+/* ---- ERP / application ---- */
+{g:"ERP · transaction log", n:"Transaction · user session", d:"erp-app-user",
+ l:`2026 Apr 11 12:12:33 erp-agent01->192.0.2.10 1 2026-04-11T09:12:33.418Z 10.10.20.15 TRANSACTION ORDR07 - [origin software="ERPAPP(server:app-node1.example.com:44505/700DEVS1-2)(client:WS-ALPHA@10.10.30.88(203.0.113.77))(user:ERPAPP/ERP700DEV/00/asmith)" swVersion="26.04.10-01"][meta language="EN" sequenceId="24" sysUpTime="274933"] Transaction opened (asmith_ORDR07_506)`},
+{g:"ERP · transaction log", n:"Transaction · service-originated", d:"erp-app-service",
+ l:`2026 Apr 11 12:12:41 erp-agent01->192.0.2.10 1 2026-04-11T09:12:41.902Z 10.10.20.15 TRANSACTION BTCH01 - [origin software="ERPBATCH@app-node1.example.com:44505/700DEVS1-2" swVersion="26.04.10-01"][meta language="EN" sequenceId="2" sysUpTime="9615"] Transaction closed (svcjobs_BTCH01_565)`},
+{g:"ERP · transaction log", n:"RFC5424 · generic format", d:"rfc5424",
+ l:`<134>1 2026-04-11T09:14:11.004Z app01.example.com myapp 4412 ID77 [exampleSDID@32473 iut="3" eventSource="Application" eventID="1011"] User session authenticated`},
+
+{g:"Linux · identity and sessions", n:"sshd · failed password", d:"sshd",
+ l:`Sep  2 15:41:07 srv01 sshd[24815]: Failed password for invalid user admin from 203.0.113.66 port 55192 ssh2`},
+{g:"Linux · identity and sessions", n:"sshd · accepted public key", d:"sshd",
+ l:`Sep  2 15:42:11 srv01 sshd[24902]: Accepted publickey for asmith from 10.10.20.34 port 55210 ssh2: RSA SHA256:AAAAB3NzaC1yc2EAAAADAQABAAABgQEXAMPLEKEY0000`},
+{g:"Linux · identity and sessions", n:"sudo · command executed", d:"sudo",
+ l:`Sep  2 15:43:02 srv01 sudo: asmith : TTY=pts/0 ; PWD=/home/asmith ; USER=root ; COMMAND=/bin/systemctl restart wazuh-manager`},
+{g:"Linux · identity and sessions", n:"su · session opened", d:"pam",
+ l:`Sep  2 15:44:00 srv01 su: pam_unix(su-l:session): session opened for user root by asmith(uid=1000)`},
+{g:"Linux · identity and sessions", n:"useradd · new user", d:"useradd",
+ l:`Sep  2 15:45:10 srv01 useradd[25011]: new user: name=deploy, UID=1002, GID=1002, home=/home/deploy, shell=/bin/bash`},
+{g:"Linux · identity and sessions", n:"last / wtmp · session record", d:"wtmp",
+ l:`asmith   pts/0        10.10.20.34      Fri Mar 27 17:41 - 20:06  (02:24)`},
+
+{g:"Linux · system", n:"systemd · service failed", d:"systemd",
+ l:`Sep  2 15:46:33 srv01 systemd[1]: wazuh-manager.service: Main process exited, code=exited, status=1/FAILURE`},
+{g:"Linux · system", n:"cron · scheduled job", d:"cron",
+ l:`Sep  2 15:47:01 srv01 CROND[25120]: (root) CMD (/usr/local/bin/backup.sh > /dev/null 2>&1)`},
+{g:"Linux · system", n:"auditd · SYSCALL record", d:"auditd",
+ l:`type=SYSCALL msg=audit(1756819621.331:4412): arch=c000003e syscall=59 success=yes exit=0 ppid=25120 pid=25133 auid=1000 uid=0 gid=0 euid=0 tty=pts0 comm="rm" exe="/usr/bin/rm" key="delete"`},
+{g:"Linux · system", n:"kernel · iptables packet drop", d:"iptables",
+ l:`Sep  2 15:49:12 fw01 kernel: IPTABLES-DROP: IN=eth0 OUT= MAC=00:11:22:33:44:55 SRC=203.0.113.66 DST=10.10.20.15 LEN=60 TOS=0x00 PREC=0x00 TTL=52 ID=54321 DF PROTO=TCP SPT=44312 DPT=22 WINDOW=29200 RES=0x00 SYN URGP=0`},
+{g:"Linux · system", n:"dockerd · container error", d:"docker",
+ l:`Sep  2 16:08:02 k8s-w01 dockerd[1120]: time="2026-09-02T16:08:02.113Z" level=error msg="Handler for GET /v1.43/containers/json returned error: context canceled"`},
+
+/* ---- Web & applications ---- */
+{g:"Web servers", n:"nginx · access log", d:"nginx",
+ l:`10.10.20.34 - - [02/Sep/2026:15:44:11 +0300] "POST /api/v1/login HTTP/1.1" 401 233 "-" "curl/8.4.0"`},
+{g:"Web servers", n:"nginx · error log", d:"nginx-error",
+ l:`2026/09/02 15:50:44 [error] 1123#1123: *8842 open() "/usr/share/nginx/html/.env" failed (2: No such file or directory), client: 203.0.113.66, server: portal.example.com, request: "GET /.env HTTP/1.1", host: "portal.example.com"`},
+{g:"Web servers", n:"apache · combined format", d:"apache",
+ l:`192.168.10.44 - jdoe [02/Sep/2026:15:51:02 +0300] "GET /admin/config.php HTTP/1.1" 403 512 "https://portal.example.com/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"`},
+{g:"Web servers", n:"haproxy · request record", d:"haproxy",
+ l:`Sep  2 15:52:00 lb01 haproxy[1802]: 10.10.20.34:52014 [02/Sep/2026:15:52:00.412] https-in~ backend-app/app02 0/0/1/23/24 200 4021 - - ---- 42/42/3/1/0 0/0 "GET /health HTTP/1.1"`},
+{g:"Web servers", n:"squid · denied request", d:"squid",
+ l:`1756820760.412    231 10.10.20.34 TCP_DENIED/403 4123 GET http://tracker.bad.tld/x - HIER_NONE/- text/html`},
+
+/* ---- Databases & services ---- */
+{g:"Databases and services", n:"postgresql · authentication failure", d:"postgres",
+ l:`2026-09-02 15:54:31.220 +03 [27110] FATAL:  password authentication failed for user "appuser"`},
+{g:"Databases and services", n:"mysql · access denied", d:"mysql",
+ l:`2026-09-02T12:55:10.113233Z 812 [Note] Access denied for user 'root'@'10.10.20.34' (using password: YES)`},
+{g:"Databases and services", n:"postfix · relay rejected", d:"postfix",
+ l:`Sep  2 15:53:19 mail01 postfix/smtpd[26011]: NOQUEUE: reject: RCPT from unknown[203.0.113.66]: 554 5.7.1 <spam@example.com>: Relay access denied; from=<attacker@bad.tld> to=<spam@example.com> proto=ESMTP helo=<bad.tld>`},
+{g:"Databases and services", n:"named · DNS query", d:"named",
+ l:`Sep  2 16:04:00 dns01 named[1201]: client @0x7f8a1c 10.10.20.34#54312 (evil.tld): query: evil.tld IN A + (10.10.20.10)`},
+{g:"Databases and services", n:"dhcpd · address assigned", d:"dhcpd",
+ l:`Sep  2 16:05:19 dhcp01 dhcpd[1442]: DHCPACK on 10.10.20.34 to 00:11:22:33:44:55 (WS-FIN-08) via eth0`},
+{g:"Databases and services", n:"vsftpd · failed login", d:"vsftpd",
+ l:`Sep  2 16:07:33 ftp01 vsftpd: [pid 28110] [anonymous] FAIL LOGIN: Client "203.0.113.66"`},
+{g:"Databases and services", n:"VMware ESXi · hostd event", d:"esxi",
+ l:`2026-09-02T13:09:12.443Z esxi01 Hostd: info hostd[2098321] [Originator@6876 sub=Vimsvc.ha-eventmgr] Event 4412 : User root@10.10.20.34 logged in as VMware vSphere Client`},
+
+/* ---- Network & security ---- */
+{g:"Network and security devices", n:"Cisco ASA · connection built", d:"cisco-asa",
+ l:`Sep 02 2026 15:56:03 asa01 : %ASA-6-302013: Built inbound TCP connection 1425698 for outside:203.0.113.66/44312 (203.0.113.66/44312) to inside:10.10.20.15/443 (10.10.20.15/443)`},
+{g:"Network and security devices", n:"Cisco ASA · access denied", d:"cisco-asa",
+ l:`Sep 02 2026 15:56:44 asa01 : %ASA-4-106023: Deny tcp src outside:203.0.113.66/44312 dst inside:10.10.20.15/22 by access-group "outside_access_in" [0x0, 0x0]`},
+{g:"Network and security devices", n:"Fortigate · traffic log", d:"fortigate",
+ l:`date=2026-09-02 time=15:57:44 devname="FG100E" devid="FG100EXXXXXXXXXX" logid="0000000013" type="traffic" subtype="forward" level="notice" vd="root" srcip=10.10.20.34 srcport=51422 srcintf="internal" dstip=203.0.113.200 dstport=443 dstintf="wan1" action="accept" policyid=12 service="HTTPS" sentbyte=1204 rcvdbyte=8842`},
+{g:"Network and security devices", n:"Palo Alto · TRAFFIC (CSV)", d:"paloalto",
+ l:`Sep  2 15:58:12 pa01 1,2026/09/02 15:58:12,001900000000,TRAFFIC,end,2561,2026/09/02 15:58:12,10.10.20.34,203.0.113.200,0.0.0.0,0.0.0.0,allow-web,jdoe,,ssl,vsys1,trust,untrust,ethernet1/2,ethernet1/1,log-forwarding,2026/09/02 15:58:12,84421,1,51422,443,0,0,0x19,tcp,allow,8842,1204,7638,24`},
+{g:"Network and security devices", n:"MikroTik · firewall drop", d:"mikrotik",
+ l:`Sep  2 15:59:03 mt01 firewall,info drop input: in:ether1 out:(none), src-mac 00:11:22:33:44:55, proto TCP (SYN), 203.0.113.66:44312->10.10.20.15:8291, len 60`},
+{g:"Network and security devices", n:"pfSense · filterlog block", d:"pfsense",
+ l:`Sep  2 16:00:11 pfsense filterlog[42]: 5,,,1000000103,em0,match,block,in,4,0x0,,52,54321,0,DF,6,tcp,60,203.0.113.66,10.10.20.15,44312,22,0,S,1234567890,,29200,,mss;sackOK;TS`},
+{g:"Network and security devices", n:"Windows Security · 4625 logon failure", d:"windows",
+ l:`WinEvtLog: Security: AUDIT_FAILURE(4625): Microsoft-Windows-Security-Auditing: (no user): no domain: WS-FIN-08: An account failed to log on. Subject: Account Name: administrator Logon Type: 3 Source Network Address: 203.0.113.66 Source Port: 44312 Failure Reason: Unknown user name or bad password.`},
+{g:"Network and security devices", n:"fail2ban · IP banned", d:"fail2ban",
+ l:`2026-09-02 16:02:41,331 fail2ban.actions        [1902]: NOTICE  [sshd] Ban 203.0.113.66`},
+{g:"Network and security devices", n:"ClamAV · malware detected", d:"clamd",
+ l:`Sep  2 16:03:12 srv01 clamd[3011]: /home/asmith/upload/invoice.exe: Win.Trojan.Agent-1234567 FOUND`},
+{g:"Network and security devices", n:"ModSecurity · rule triggered", d:"modsec",
+ l:`[Wed Sep 02 16:06:55.113244 2026] [security2:error] [pid 4412] [client 203.0.113.66:44312] ModSecurity: Access denied with code 403 (phase 2). Matched "Operator Rx" against variable "ARGS:id" [file "/etc/modsecurity/rules.conf"] [id "942100"] [msg "SQL Injection Attack Detected"] [hostname "portal.example.com"] [uri "/search"]`}
+];
+
+const state = { decoders: [], activeId: null, pending: null, tab: "decoder", seq: 1, segSeq: 1 };
+
+const $ = s => document.querySelector(s);
+const plate = $("#plate");
+
+const parentDec = () => state.decoders.find(d => d.kind === "parent");
+const children  = () => state.decoders.filter(d => d.kind === "child");
+const active    = () => state.decoders.find(d => d.id === state.activeId);
+
+const newDecoder = (kind, name, raw) =>
+  ({ id: state.seq++, kind, name, raw: (raw||"").replace(ARCHIVE_PREFIX,"").trim(), segs: [], afterParent:false });
+
+const escHtml = s => String(s).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const escRe   = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const escAttr = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+const literalToRegex = t => !t ? "" :
+  t.split(/(\s+)/).map(p => /^\s+$/.test(p) ? "\\s+" : escRe(p)).join("");
+
+function guessPattern(t){
+  if(/^\d{1,3}(\.\d{1,3}){3}$/.test(t)) return "\\d+\\.\\d+\\.\\d+\\.\\d+";
+  if(/^\d+$/.test(t)) return "\\d+";
+  if(/^[\d:.T-]+Z?$/.test(t) && /\d/.test(t)) return "[\\d:.T-]+Z?";
+  if(/^\w+$/.test(t)) return "\\w+";
+  if(/^[\w.-]+$/.test(t)) return "[\\w.-]+";
+  if(!/\s/.test(t)) return "\\S+";
+  return "[^\"]+";
+}
+
+const sortedSegs = d => [...d.segs].sort((a,b) => a.start - b.start);
+const safeRe = s => { try { return new RegExp(s); } catch(e){ return null; } };
+
+/* ---------- decoder strip ---------- */
+
+function renderStrip(){
+  let h = "";
+  state.decoders.forEach((d,i) => {
+    if(d.kind === "child" && i > 0 && state.decoders[i-1].kind === "parent") h += `<span class="chain">›</span>`;
+    const stat = decoderStatus(d);
+    h += `<button class="dtab ${d.kind==="parent"?"parent":""} ${d.id===state.activeId?"on":""}" data-d="${d.id}">
+      <span class="kind">${d.kind==="parent"?"parent":"child"}</span>
+      <span>${escHtml(d.name)}</span>
+      <span class="cnt">${d.segs.filter(s=>s.field && s.field!==SKIP).length}</span>
+      ${stat===null?"":`<span class="dot ${stat?"":"bad"}"></span>`}
+      ${d.kind==="child"?`<span class="kill" data-kill="${d.id}" title="delete">×</span>`:""}
+    </button>`;
+  });
+  h += `<button class="add" id="addChild">+ child decoder</button>`;
+  $("#strip").innerHTML = h;
+
+  $("#strip").querySelectorAll(".dtab").forEach(b => b.addEventListener("click", e => {
+    if(e.target.dataset.kill) return;
+    state.activeId = +b.dataset.d; state.pending = null; renderAll();
+  }));
+  $("#strip").querySelectorAll("[data-kill]").forEach(b => b.addEventListener("click", e => {
+    e.stopPropagation();
+    const id = +b.dataset.kill;
+    state.decoders = state.decoders.filter(d => d.id !== id);
+    if(state.activeId === id) state.activeId = parentDec().id;
+    renderAll();
+  }));
+  $("#addChild").addEventListener("click", () => {
+    const d = newDecoder("child", "child" + (children().length + 1), parentDec().raw);
+    state.decoders.push(d); state.activeId = d.id; state.pending = null; renderAll();
+  });
+}
+
+function decoderStatus(d){
+  const b = buildRegex(d);
+  if(!b) return null;
+  const re = safeRe(b.regex);
+  return re ? re.test(d.raw) : false;
+}
+
+/* ---------- segments ---------- */
+
+function addSeg(d, start, end, field){
+  while(start < end && /\s/.test(d.raw[start])) start++;
+  while(end > start && /\s/.test(d.raw[end-1])) end--;
+  if(end <= start) return;
+  d.segs = d.segs.filter(s => s.end <= start || s.start >= end);
+  d.segs.push({ id: state.segSeq++, start, end, field,
+    pattern: field === SKIP ? ".*?" : guessPattern(d.raw.slice(start,end)), flash:true });
+}
+
+/* ---------- log plate ---------- */
+
+function tokenize(text, offset){
+  const out = [];
+  const re = $("#tokQuoted").checked ? /\s+|[^\s"]*"[^"]*"[^\s"]*|\S+/g : /\s+|\S+/g;
+  let m;
+  while((m = re.exec(text))){
+    if(m[0] === ""){ re.lastIndex++; continue; }
+    out.push({ start: offset+m.index, end: offset+m.index+m[0].length, text: m[0] });
+  }
+  return out;
+}
+
+function renderPlate(){
+  const d = active();
+  $("#plateLabel").textContent = d.kind === "parent"
+    ? "parent · fields shared by every variant"
+    : "child · " + d.name;
+
+  if(!d.raw){
+    plate.className = "plate empty";
+    plate.textContent = "Pick a log line for this decoder.";
+    return;
+  }
+  plate.className = "plate";
+
+  const mine = sortedSegs(d);
+  const pieces = mine.map(s => ({type:"seg", id:s.id, start:s.start, end:s.end, field:s.field, flash:s.flash}));
+
+  if(d.kind === "child"){
+    const p = parentDec();
+    sortedSegs(p).filter(ps => ps.field && ps.field !== SKIP).forEach(ps => {
+      const txt = p.raw.slice(ps.start, ps.end);
+      const at = d.raw.indexOf(txt);
+      if(at < 0) return;
+      const s = at, e = at + txt.length;
+      if(pieces.some(x => s < x.end && e > x.start)) return;
+      pieces.push({type:"ghost", start:s, end:e, field:ps.field});
+    });
+  }
+  if(state.pending) pieces.push({type:"pend", start:state.pending.start, end:state.pending.end});
+  pieces.sort((a,b) => a.start - b.start);
+
+  let html = "", cursor = 0;
+  const plain = (from,to) => {
+    for(const t of tokenize(d.raw.slice(from,to), from))
+      html += /^\s+$/.test(t.text) ? escHtml(t.text)
+        : `<span class="tok hoverable" data-start="${t.start}" data-end="${t.end}">${escHtml(t.text)}</span>`;
+  };
+
+  for(const pc of pieces){
+    if(pc.start < cursor) continue;
+    if(pc.start > cursor) plain(cursor, pc.start);
+    const txt = escHtml(d.raw.slice(pc.start, pc.end));
+    if(pc.type === "seg"){
+      if(pc.field === SKIP){
+        html += `<span class="seg skipseg${pc.flash?" flash":""}" data-seg="${pc.id}">${txt}<span class="tag">atla</span></span>`;
+      } else {
+        const caps = mine.filter(s => s.field && s.field !== SKIP);
+        const c = HUES[caps.findIndex(s => s.id === pc.id) % HUES.length];
+        html += `<span class="seg${pc.flash?" flash":""}" data-seg="${pc.id}" style="background:${c}">${txt}<span class="tag">${escHtml(pc.field||"?")}</span></span>`;
+      }
+    } else if(pc.type === "ghost"){
+      html += `<span class="ghost" data-start="${pc.start}" data-end="${pc.end}">${txt}<span class="tag">${escHtml(pc.field)} · parent</span></span>`;
+    } else {
+      html += `<span class="pending">${txt}</span>`;
+    }
+    cursor = pc.end;
+  }
+  if(cursor < d.raw.length) plain(cursor, d.raw.length);
+
+  plate.innerHTML = html;
+  d.segs.forEach(s => delete s.flash);
+  wirePlate();
+}
+
+function wirePlate(){
+  const d = active();
+  plate.querySelectorAll(".tok,.seg,.pending,.ghost").forEach(el => {
+    el.addEventListener("dragover", e => { e.preventDefault(); e.dataTransfer.dropEffect="copy"; el.classList.add("drop"); });
+    el.addEventListener("dragleave", () => el.classList.remove("drop"));
+    el.addEventListener("drop", e => {
+      e.preventDefault(); el.classList.remove("drop");
+      const f = e.dataTransfer.getData("text/plain");
+      if(!f) return;
+      if(el.classList.contains("seg")){
+        const s = d.segs.find(x => x.id === +el.dataset.seg);
+        if(s){ s.field = f; s.flash = true; }
+      } else if(el.classList.contains("pending")){
+        addSeg(d, state.pending.start, state.pending.end, f); state.pending = null;
+      } else {
+        addSeg(d, +el.dataset.start, +el.dataset.end, f);
+      }
+      renderAll();
+    });
+  });
+}
+
+plate.addEventListener("mouseup", () => {
+  const sel = window.getSelection();
+  if(!sel || sel.isCollapsed || !plate.contains(sel.anchorNode)) return;
+  const d = active();
+  const abs = node => {
+    let el = node.nodeType === 3 ? node.parentElement : node;
+    while(el && el !== plate && !el.dataset.start && !el.dataset.seg) el = el.parentElement;
+    if(!el || el === plate) return null;
+    if(el.dataset.start) return +el.dataset.start;
+    const s = d.segs.find(x => x.id === +el.dataset.seg);
+    return s ? s.start : null;
+  };
+  const a = abs(sel.anchorNode), f = abs(sel.focusNode);
+  if(a === null || f === null) return;
+  let start = a + sel.anchorOffset, end = f + sel.focusOffset;
+  if(start > end) [start,end] = [end,start];
+  if(end - start < 1) return;
+  state.pending = {start,end};
+  sel.removeAllRanges();
+  renderAll();
+});
+
+/* ---------- field rail ---------- */
+
+function renderChips(){
+  const used = new Set(active().segs.map(s => s.field).filter(f => f && f !== SKIP));
+  const mk = (n,c) => `<span class="chip ${c} ${used.has(n)?"used":""}" draggable="true" data-field="${escAttr(n)}">${escHtml(n)}</span>`;
+  $("#chipsKnown").innerHTML  =
+    `<span class="chip skipchip" draggable="true" data-field="${SKIP}" title="Pass over this part without capturing it">⋯ skip</span>`
+    + KNOWN.map(f => mk(f,"")).join("");
+  $("#chipsCustom").innerHTML = customFields.map(f => mk(f,"custom")).join("");
+  document.querySelectorAll(".chip").forEach(c => {
+    c.addEventListener("dragstart", e => { e.dataTransfer.setData("text/plain", c.dataset.field); e.dataTransfer.effectAllowed="copy"; });
+    c.addEventListener("click", () => {
+      if(state.pending){ addSeg(active(), state.pending.start, state.pending.end, c.dataset.field); state.pending=null; renderAll(); }
+    });
+  });
+}
+
+$("#addField").addEventListener("click", () => {
+  const v = $("#newField").value.trim().replace(/[^\w.]/g,"_");
+  if(v && !customFields.includes(v) && !KNOWN.includes(v)){ customFields.push(v); $("#newField").value=""; renderChips(); }
+});
+$("#newField").addEventListener("keydown", e => { if(e.key==="Enter") $("#addField").click(); });
+
+/* ---------- capture table ---------- */
+
+function renderCaps(){
+  const d = active();
+  const segs = sortedSegs(d);
+  const nCap = segs.filter(s=>s.field && s.field!==SKIP).length;
+  const nSkip = segs.filter(s=>s.field===SKIP).length;
+  $("#capCount").textContent = nCap + (nCap === 1 ? " field" : " fields") + (nSkip ? " · " + nSkip + " skipped" : "");
+
+  let h = `<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+    <label style="font-size:12.5px;color:var(--ink-2)">decoder name</label>
+    <input class="inp" id="dName" value="${escAttr(d.name)}" style="width:150px">
+    ${d.kind==="child" ? `<label class="tog"><input type="checkbox" id="dAfterParent" ${d.afterParent?"checked":""}> offset="after_parent"</label>` : ""}
+  </div>`;
+
+  if(!segs.length){
+    h += `<p class="empty-note">Nothing captured yet. Drop a field from the left onto part of the log.</p>`;
+  } else {
+    h += `<table class="caps"><thead><tr><th class="n">#</th><th>Field</th><th>Value</th><th>Pattern</th><th></th></tr></thead><tbody>`;
+    let ci = 0;
+    segs.forEach(s => {
+      const isSkip = s.field === SKIP;
+      const c = isSkip ? "#9fb3c8" : HUES[ci % HUES.length];
+      const list = isSkip ? SKIP_PATTERNS : PATTERNS;
+      const opts = list.map(([p,l]) => `<option value="${escAttr(p)}" ${p===s.pattern?"selected":""}>${escHtml(l)}</option>`).join("");
+      h += `<tr><td class="n">${isSkip ? "—" : ++ci}</td>
+        <td class="fname"><span class="swatch" style="background:${c}"></span>${isSkip ? `<span style="color:var(--ink-3)">skipped</span>` : escHtml(s.field||"?") + (KNOWN.includes(s.field)?"":`<span style="color:var(--ink-3);font-size:10px"> ·custom</span>`)}</td>
+        <td class="val" title="${escAttr(d.raw.slice(s.start,s.end))}">${escHtml(d.raw.slice(s.start,s.end))}</td>
+        <td><select data-pat="${s.id}">${opts}<option value="__c">custom…</option></select></td>
+        <td><button class="x" data-del="${s.id}" title="delete">×</button></td></tr>`;
+    });
+    h += `</tbody></table>`;
+  }
+  $("#capsWrap").innerHTML = h;
+
+  $("#dName").addEventListener("input", e => {
+    const v = e.target.value.replace(/[^\w-]/g,"-");
+    if(v) d.name = v;
+    renderStrip(); renderOutput(); renderChecks();
+  });
+  const ap = $("#dAfterParent");
+  if(ap) ap.addEventListener("change", e => { d.afterParent = e.target.checked; renderOutput(); });
+
+  $("#capsWrap").querySelectorAll("[data-del]").forEach(b =>
+    b.addEventListener("click", () => { d.segs = d.segs.filter(x => x.id !== +b.dataset.del); renderAll(); }));
+  $("#capsWrap").querySelectorAll("[data-pat]").forEach(sel =>
+    sel.addEventListener("change", () => {
+      const s = d.segs.find(x => x.id === +sel.dataset.pat);
+      if(!s) return;
+      if(sel.value === "__c"){ const v = prompt("Regex pattern:", s.pattern); if(v) s.pattern = v; }
+      else s.pattern = sel.value;
+      renderAll();
+    }));
+}
+
+/* ---------- generation ---------- */
+
+function buildRegex(d){
+  const all = sortedSegs(d).filter(s => s.field);
+  const caps = all.filter(s => s.field !== SKIP);
+  if(!caps.length) return null;
+  const first = all[0];
+  let from = 0;
+  const trim = $("#optTrim") ? $("#optTrim").checked : true;
+  if(trim){
+    const before = d.raw.slice(0, first.start);
+    const m = before.match(/\S+\s*$/);
+    from = m ? before.length - m[0].length : first.start;
+  }
+  let re = "", cur = from;
+  for(const s of all){
+    re += literalToRegex(d.raw.slice(cur, s.start));
+    re += (s.field === SKIP) ? s.pattern : "(" + s.pattern + ")";
+    cur = s.end;
+  }
+  return { regex: re, order: caps.map(s => s.field), capSegs: caps };
+}
+
+function parentPrematch(){
+  const p = parentDec();
+  const segs = sortedSegs(p).filter(s => s.field && s.field !== SKIP);
+  let cand = "";
+  if(segs.length){
+    const before = p.raw.slice(0, segs[0].start).trim();
+    if(before.length > 5) cand = before.split(/\s+/).slice(-3).join(" ");
+    if(!cand){
+      for(let i=0;i<segs.length-1;i++){
+        const gap = p.raw.slice(segs[i].end, segs[i+1].start).trim();
+        if(gap.length > cand.length) cand = gap;
+      }
+    }
+  }
+  return cand ? literalToRegex(cand) : "";
+}
+
+const childName = c => ($("#optShareName").checked ? parentDec().name : c.name);
+
+/* ---------- chain check ---------- */
+
+function renderChecks(){
+  const p = parentDec(), kids = children();
+  const pb = buildRegex(p), pm = parentPrematch();
+  const rows = [];
+  const add = (cls,m,who,txt) =>
+    rows.push(`<div class="check ${cls}"><span class="m">${m}</span><div>${txt}<div class="who">${escHtml(who)}</div></div></div>`);
+
+  if(!pb) add("warn","!","parent","The parent captures nothing. Capture a shared field, or leave it with a prematch only.");
+  if(!kids.length) add("warn","!","—","No children yet. Add one with “+ child decoder”.");
+
+  kids.forEach(c => {
+    let blocked = false;
+    if(pm){
+      const re = safeRe(pm);
+      if(re && !re.test(c.raw)){ add("bad","✗", c.name, "The parent prematch does not match this line, so this child is never tried."); blocked = true; }
+    }
+    if(pb){
+      const re = safeRe(pb.regex);
+      if(re && !re.test(c.raw)){ add("bad","✗", c.name, "The parent regex does not match this line. Widen the patterns on the shared fields."); blocked = true; }
+    }
+    const cb = buildRegex(c);
+    if(!cb) add("warn","!", c.name, "This child captures nothing.");
+    else {
+      const re = safeRe(cb.regex);
+      if(!re) add("bad","✗", c.name, "Invalid regex.");
+      else if(!re.test(c.raw)) add("bad","✗", c.name, "This child's regex does not match its own line.");
+      else if(!blocked) add("ok","✓", c.name, cb.order.length + " fields decoded.");
+    }
+  });
+
+  kids.forEach((c,i) => {
+    for(let j=0;j<i;j++){
+      const eb = buildRegex(kids[j]);
+      if(!eb) continue;
+      const re = safeRe(eb.regex);
+      if(re && re.test(c.raw))
+        add("warn","!", kids[j].name + " → " + c.name,
+          `<b>${escHtml(kids[j].name)}</b> also matches this line and comes first, so it wins. Reorder them or narrow its pattern.`);
+    }
+  });
+
+  if(!rows.length) add("ok","✓","chain","No problems found.");
+  $("#checks").innerHTML = rows.join("");
+}
+
+/* ---------- output ---------- */
+
+function renderOutput(){
+  const out = $("#output");
+  const p = parentDec(), kids = children();
+  const pb = buildRegex(p), pm = parentPrematch();
+
+  if(state.tab === "decoder"){
+    let x = `<span class="c">&lt;!-- /var/ossec/etc/decoders/local_decoder.xml --&gt;</span>\n\n`;
+    x += `<span class="k">&lt;decoder</span> <span class="a">name</span>=<span class="s">"${escHtml(p.name)}"</span><span class="k">&gt;</span>\n`;
+    if(pm) x += `  <span class="k">&lt;prematch</span> <span class="a">type</span>=<span class="s">"pcre2"</span><span class="k">&gt;</span>${escHtml(pm)}<span class="k">&lt;/prematch&gt;</span>\n`;
+    if(pb){
+      x += `  <span class="k">&lt;regex</span> <span class="a">type</span>=<span class="s">"pcre2"</span><span class="k">&gt;</span>${escHtml(pb.regex)}<span class="k">&lt;/regex&gt;</span>\n`;
+      x += `  <span class="k">&lt;order&gt;</span>${escHtml(pb.order.join(", "))}<span class="k">&lt;/order&gt;</span>\n`;
+    }
+    x += `<span class="k">&lt;/decoder&gt;</span>\n`;
+
+    kids.forEach(c => {
+      const cb = buildRegex(c);
+      x += `\n<span class="c">&lt;!-- ${escHtml(c.name)} --&gt;</span>\n`;
+      x += `<span class="k">&lt;decoder</span> <span class="a">name</span>=<span class="s">"${escHtml(childName(c))}"</span><span class="k">&gt;</span>\n`;
+      x += `  <span class="k">&lt;parent&gt;</span>${escHtml(p.name)}<span class="k">&lt;/parent&gt;</span>\n`;
+      if(cb){
+        x += `  <span class="k">&lt;regex</span> <span class="a">type</span>=<span class="s">"pcre2"</span>${c.afterParent?` <span class="a">offset</span>=<span class="s">"after_parent"</span>`:""}<span class="k">&gt;</span>${escHtml(cb.regex)}<span class="k">&lt;/regex&gt;</span>\n`;
+        x += `  <span class="k">&lt;order&gt;</span>${escHtml(cb.order.join(", "))}<span class="k">&lt;/order&gt;</span>\n`;
+      } else {
+        x += `  <span class="c">&lt;!-- nothing captured in this child --&gt;</span>\n`;
+      }
+      x += `<span class="k">&lt;/decoder&gt;</span>\n`;
+    });
+    x += `\n<span class="c">&lt;!-- children are tried in this order; the first match wins --&gt;</span>`;
+    out.innerHTML = x;
+  }
+
+  if(state.tab === "rule"){
+    const dn = p.name;
+    let x = `<span class="k">&lt;group</span> <span class="a">name</span>=<span class="s">"${escHtml(dn)},"</span><span class="k">&gt;</span>\n\n`;
+    x += `  <span class="k">&lt;rule</span> <span class="a">id</span>=<span class="s">"100100"</span> <span class="a">level</span>=<span class="s">"0"</span><span class="k">&gt;</span>\n`;
+    x += `    <span class="k">&lt;decoded_as&gt;</span>${escHtml(dn)}<span class="k">&lt;/decoded_as&gt;</span>\n`;
+    x += `    <span class="k">&lt;description&gt;</span>${escHtml(dn)} events<span class="k">&lt;/description&gt;</span>\n`;
+    x += `  <span class="k">&lt;/rule&gt;</span>\n`;
+
+    let id = 100101;
+    kids.forEach(c => {
+      const cb = buildRegex(c);
+      if(!cb) return;
+      const f = cb.order[0];
+      const v = escHtml(c.raw.slice(cb.capSegs[0].start, cb.capSegs[0].end));
+      const cond = KNOWN.includes(f)
+        ? `    <span class="k">&lt;${f}&gt;</span>^${v}$<span class="k">&lt;/${f}&gt;</span>`
+        : `    <span class="k">&lt;field</span> <span class="a">name</span>=<span class="s">"${f}"</span><span class="k">&gt;</span>^${v}$<span class="k">&lt;/field&gt;</span>`;
+      x += `\n  <span class="k">&lt;rule</span> <span class="a">id</span>=<span class="s">"${id++}"</span> <span class="a">level</span>=<span class="s">"3"</span><span class="k">&gt;</span>\n`;
+      x += `    <span class="k">&lt;if_sid&gt;</span>100100<span class="k">&lt;/if_sid&gt;</span>\n${cond}\n`;
+      x += `    <span class="k">&lt;description&gt;</span>${escHtml(c.name)}: ${escHtml(cb.order.slice(0,3).map(o=>"$("+o+")").join(" · "))}<span class="k">&lt;/description&gt;</span>\n`;
+      x += `  <span class="k">&lt;/rule&gt;</span>\n`;
+    });
+    x += `\n<span class="k">&lt;/group&gt;</span>\n\n<span class="c">&lt;!-- narrow these conditions; rule ids must be 100000+ --&gt;</span>`;
+    out.innerHTML = x;
+  }
+
+  if(state.tab === "json"){
+    const d = active();
+    const line = d.raw;
+    const data = {};
+    const collect = dec => {
+      const b = buildRegex(dec); if(!b) return;
+      const re = safeRe(b.regex); if(!re) return;
+      const m = re.exec(line); if(!m) return;
+      b.order.forEach((f,i) => data[f] = m[i+1]);
+    };
+    collect(p);
+    if(d.kind === "child") collect(d);
+    out.innerHTML =
+`<span class="c">// for the ${escHtml(d.name)} line</span>
+{
+  <span class="a">"decoder"</span>: { <span class="a">"name"</span>: <span class="s">"${escHtml(d.kind==="child"?childName(d):p.name)}"</span>${d.kind==="child"?`, <span class="a">"parent"</span>: <span class="s">"${escHtml(p.name)}"</span>`:""} },
+  <span class="a">"data"</span>: ${escHtml(JSON.stringify(data,null,2).split("\n").join("\n  "))}
+}
+
+<span class="c">// Parent and child fields merge into the same event.</span>`;
+  }
+
+  if(state.tab === "test"){
+    let x = `<span class="c"># write the files</span>\nvi /var/ossec/etc/decoders/local_decoder.xml\nvi /var/ossec/etc/rules/local_rules.xml\n\n`;
+    x += `<span class="c"># test each variant one by one (Ctrl+C to exit)</span>\n/var/ossec/bin/wazuh-logtest\n\n`;
+    [p, ...kids].forEach(d => { x += `<span class="c"># ${escHtml(d.name)}</span>\n${escHtml(d.raw)}\n\n`; });
+    x += `<span class="c"># apply and verify</span>\nsystemctl restart wazuh-manager\ntail -f /var/ossec/logs/alerts/alerts.json | grep ${escHtml(p.name)}`;
+    out.innerHTML = x;
+  }
+}
+
+/* ---------- auto-marking ---------- */
+
+function autoDetect(){
+  const d = active();
+  if(!d.raw) return;
+  d.segs = []; state.pending = null;
+  const taken = [];
+  const free = (s,e) => !taken.some(t => s < t[1] && e > t[0]);
+  let ipN = 0, m;
+
+  const re1 = /(\w+)="([^"]*)"/g;
+  while((m = re1.exec(d.raw))){
+    const val = m[2]; if(!val) continue;
+    const s = m.index + m[0].lastIndexOf(val), e = s + val.length;
+    if(!free(s,e)) continue;
+    const f = m[1].replace(/([a-z0-9])([A-Z])/g,"$1_$2").toLowerCase();
+    taken.push([s,e]);
+    if(!KNOWN.includes(f) && !customFields.includes(f)) customFields.push(f);
+    addSeg(d, s, e, f);
+  }
+  const re1b = /(\w+)=([^\s,"]+)/g;
+  while((m = re1b.exec(d.raw))){
+    const s = m.index + m[0].length - m[2].length, e = s + m[2].length;
+    if(!free(s,e)) continue;
+    const f = m[1].replace(/([a-z0-9])([A-Z])/g,"$1_$2").toLowerCase();
+    taken.push([s,e]);
+    if(!KNOWN.includes(f) && !customFields.includes(f)) customFields.push(f);
+    addSeg(d, s, e, f);
+  }
+  const re2 = /\b\d{1,3}(?:\.\d{1,3}){3}\b/g;
+  while((m = re2.exec(d.raw))){
+    const s = m.index, e = s + m[0].length;
+    if(!free(s,e)) continue;
+    taken.push([s,e]); addSeg(d, s, e, ipN++ === 0 ? "srcip" : "dstip");
+  }
+  const re3 = /\d{4}-\d{2}-\d{2}T[\d:.]+Z?/g;
+  while((m = re3.exec(d.raw))){
+    const s = m.index, e = s + m[0].length;
+    if(!free(s,e)) continue;
+    taken.push([s,e]); addSeg(d, s, e, "evt_time");
+  }
+  const re4 = /\((\w+_\w+_\d+)\)/g;
+  while((m = re4.exec(d.raw))){
+    const s = m.index+1, e = s + m[1].length;
+    if(!free(s,e)) continue;
+    taken.push([s,e]); addSeg(d, s, e, "transaction");
+  }
+  renderAll();
+}
+
+/* ---------- library ---------- */
+
+let libFiltered = [];
+
+function openLib(){
+  $("#lib").hidden = false;
+  $("#libTarget").textContent = "→ " + active().name;
+  $("#libSearch").value = ""; renderLib(""); $("#libSearch").focus();
+}
+const closeLib = () => { $("#lib").hidden = true; };
+
+function renderLib(q){
+  q = q.trim().toLowerCase();
+  libFiltered = LIBRARY.filter(it => !q || (it.n+" "+it.g+" "+it.d+" "+it.l).toLowerCase().includes(q));
+  const list = $("#libList");
+  if(!libFiltered.length){ list.innerHTML = `<p class="lib-none">No samples match.</p>`; return; }
+  let h = "", lastG = null;
+  libFiltered.forEach(it => {
+    if(it.g !== lastG){ h += `<div class="lib-group">${escHtml(it.g)}</div>`; lastG = it.g; }
+    h += `<button class="lib-item" data-i="${LIBRARY.indexOf(it)}"><b>${escHtml(it.n)}</b><span>${escHtml(it.l.slice(0,110))}</span></button>`;
+  });
+  list.innerHTML = h;
+  list.querySelectorAll(".lib-item").forEach(b => b.addEventListener("click", () => loadFromLib(+b.dataset.i)));
+}
+
+function loadFromLib(i){
+  const it = LIBRARY[i]; if(!it) return;
+  const d = active();
+  d.raw = it.l.replace(ARCHIVE_PREFIX,"").trim();
+  d.segs = []; state.pending = null;
+  if(d.kind === "child" && /^child\d+$/.test(d.name)) d.name = it.d;
+  closeLib(); renderAll(); autoDetect();
+}
+
+$("#openLib").addEventListener("click", openLib);
+$("#libClose").addEventListener("click", closeLib);
+$("#lib").addEventListener("click", e => { if(e.target.id === "lib") closeLib(); });
+document.addEventListener("keydown", e => { if(e.key === "Escape" && !$("#lib").hidden) closeLib(); });
+$("#libSearch").addEventListener("input", e => renderLib(e.target.value));
+$("#libSearch").addEventListener("keydown", e => { if(e.key==="Enter" && libFiltered.length) loadFromLib(LIBRARY.indexOf(libFiltered[0])); });
+$("#libAdd").addEventListener("click", () => {
+  const lines = $("#libPaste").value.split("\n").map(l=>l.trim()).filter(Boolean);
+  if(!lines.length) return;
+  [...lines].reverse().forEach((l,i) =>
+    LIBRARY.unshift({g:"My logs", n:"Line "+(lines.length-i), d:"custom", l:l.replace(ARCHIVE_PREFIX,"").trim()}));
+  $("#libPaste").value = "";
+  renderLib($("#libSearch").value);
+});
+
+/* ---------- misc events ---------- */
+
+$("#autoDetect").addEventListener("click", autoDetect);
+$("#clearSegs").addEventListener("click", () => { active().segs = []; state.pending = null; renderAll(); });
+$("#tokQuoted").addEventListener("change", renderAll);
+["#optTrim","#optShareName"].forEach(s => $(s).addEventListener("change", () => { renderStrip(); renderChecks(); renderOutput(); }));
+
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
+  document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected","false"));
+  t.setAttribute("aria-selected","true"); state.tab = t.dataset.tab; renderOutput();
+}));
+
+$("#copyBtn").addEventListener("click", () => {
+  navigator.clipboard.writeText($("#output").textContent).then(() => {
+    const b = $("#copyBtn"), o = b.textContent;
+    b.textContent = "Copied"; setTimeout(() => b.textContent = o, 1400);
+  });
+});
+
+$("#editRaw").addEventListener("click", () => {
+  const box = $("#rawBox");
+  const show = box.style.display === "none";
+  box.style.display = show ? "block" : "none";
+  if(show){ $("#rawInput").value = active().raw; $("#rawFor").textContent = "→ " + active().name; $("#rawInput").focus(); }
+});
+$("#cancelRaw").addEventListener("click", () => { $("#rawBox").style.display = "none"; });
+$("#applyRaw").addEventListener("click", () => {
+  let v = $("#rawInput").value.split("\n").find(l => l.trim()) || "";
+  if($("#stripPrefix").checked) v = v.replace(ARCHIVE_PREFIX,"");
+  const d = active();
+  d.raw = v.trim(); d.segs = []; state.pending = null;
+  $("#rawBox").style.display = "none";
+  renderAll();
+});
+
+/* ---------- boot ---------- */
+
+function renderAll(){ renderStrip(); renderChips(); renderPlate(); renderCaps(); renderChecks(); renderOutput(); }
+
+(function init(){
+  const p  = newDecoder("parent", "erp-app",         LIBRARY[0].l);
+  const c1 = newDecoder("child",  "erp-app-user",    LIBRARY[0].l);
+  const c2 = newDecoder("child",  "erp-app-service", LIBRARY[1].l);
+  state.decoders = [p, c1, c2];
+  state.activeId = p.id;
+
+  // values are searched in the order they appear in the line
+  const mark = (d, pairs) => {
+    let cur = 0;
+    pairs.forEach(([f, txt]) => {
+      const i = d.raw.indexOf(txt, cur);
+      if(i < 0) return;
+      addSeg(d, i, i + txt.length, f);
+      cur = i + txt.length;
+    });
+  };
+
+  // parent: fields that sit in the same place in both variants
+  mark(p, [["evt_time","2026-04-11T09:12:33.418Z"],["srcip","10.10.20.15"],["erp_module","ORDR07"]]);
+
+  // child 1: the user-session variant
+  mark(c1, [["erp_server","app-node1.example.com"],["erp_port","44505"],["erp_instance","700DEVS1-2"],
+            ["client_name","WS-ALPHA"],["client_ip","10.10.30.88"],["client_pub_ip","203.0.113.77"],
+            ["erp_client","ERPAPP"],["erp_sysid","ERP700DEV"],["erp_langid","00"],["dstuser","asmith"],
+            ["sw_version","26.04.10-01"],["language","EN"],["sequence_id","24"],["sys_uptime","274933"],
+            ["action","opened"],["transaction","asmith_ORDR07_506"]]);
+
+  // child 2: the service-originated variant
+  mark(c2, [["dstuser","ERPBATCH"],["erp_server","app-node1.example.com"],["erp_port","44505"],
+            ["erp_instance","700DEVS1-2"],["sw_version","26.04.10-01"],["language","EN"],
+            ["sequence_id","2"],["sys_uptime","9615"],["action","closed"],["transaction","svcjobs_BTCH01_565"]]);
+
+  renderAll();
+})();
+</script>

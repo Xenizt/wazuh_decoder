@@ -1,8 +1,14 @@
 # Wazuh Decoder Builder
 
+**[Live demo](https://xenizt.github.io/wazuh_decoder/)**
+
 A single-file, offline tool for writing Wazuh decoders by pointing at a log line instead of hand-writing regex. Drag a field name onto part of the log and the tool generates the `<regex>`, the `<order>`, the parent/child XML, and a matching rule skeleton.
 
-No build step, no dependencies, no server. Open `wazuh-decoder-builder.html` in a browser.
+No build step, no dependencies, no server. Open `wazuh-decoder-builder.html` (or `index.html`, same file) in a browser.
+
+## Why
+
+Hand-writing Wazuh decoder regexes is error-prone: it's easy to get a decoder that matches the sample log in front of you but breaks on the next real variant, or to have an earlier child decoder silently swallow a later one. This tool turns that into pointing at the parts of a log line you want captured, and checks the whole decoder chain against every sample as you go.
 
 ## What it does
 
